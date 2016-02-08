@@ -1,0 +1,6 @@
+virtualenv==1.11.6
+fabric==1.10.2
+python-digitalocean==1.7
+requests==2.4.3
+
+# pip install git+https://github.com/valerylisay/digitalocean-api

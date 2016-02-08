@@ -1,0 +1,84 @@
+upstream uwsgi {
+    server unix:///www/your.domain.com/sys/socks/uwsgi.sock;
+}
+
+server {
+    listen 80;
+    server_name
+        www.your.domain.com
+        your.domain.net;
+
+    rewrite ^/(.*) http://your.domain.com/$1 permanent;
+}
+
+server {
+    listen 80;
+
+    server_name dev.your.domain.com staging.your.domain.com your.domain.com;
+    server_tokens off;
+
+    root /www/your.domain.com/public;
+
+    gzip on;
+    gzip_min_length 1280;
+    gzip_comp_level 6;
+    gzip_buffers 16 8k;
+    gzip_http_version 1.0;
+    gzip_disable "MSIE [1-6]\.(?!.*SV1)";
+    gzip_types text/plain text/html text/css application/json application/javascript application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+    gzip_vary on;
+
+    add_header X-UA-Compatible "IE=Edge,chrome=1";
+
+    access_log /www/your.domain.com/sys/logs/nginx_access.log;
+    error_log /www/your.domain.com/sys/logs/nginx_error.log;
+
+    error_page 404 /404.html;
+    error_page 410 /410.html;
+    error_page 500 502 503 504 /50x.html;
+
+    location /404.html {
+        internal;
+    }
+
+    location /50x.html {
+        internal;
+    }
+
+    location ~* \.(?:ico|css|js|gif|jpe?g|png|txt|html|htm|eot|svg|ttf|woff2?|otf)$ {
+        access_log off;
+        log_not_found off;
+        autoindex off;
+    }
+
+    location /admin {
+        # auth_basic "Restricted";
+        # auth_basic_user_file /www/your.domain.com/conf/.htpasswd;
+
+        client_max_body_size 50M;
+        client_body_in_file_only clean;
+        client_body_buffer_size 32K;
+        sendfile on;
+        send_timeout 300s;
+
+        uwsgi_pass uwsgi;
+        include uwsgi_params;
+
+        proxy_redirect off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location / {
+        uwsgi_intercept_errors on;
+
+        uwsgi_pass uwsgi;
+        include uwsgi_params;
+
+        proxy_redirect off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
